@@ -1,0 +1,5 @@
+int64 index
+---
+string product_name
+int device_id
+bool success
