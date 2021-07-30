@@ -1,8 +1,8 @@
 import rclpy
 import ortery_driver as driver
 from rclpy.node import Node
-from turntable_srvs.msg import CommandDesc
-from turntable_srvs.srv import GetDeviceCount, GetDeviceInfo, GetCommandDescs
+from turntable_interfaces.msg import CommandDesc
+from turntable_interfaces.srv import GetDeviceCount, GetDeviceInfo, GetCommandDescs
 
 
 def map_ortery_command_desc_to_ros_type(ocd):
