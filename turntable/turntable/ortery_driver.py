@@ -5,13 +5,13 @@ from collections import namedtuple
 
 def rwo(command):
     """Wrap subprocess.run to always capture output."""
-    return subprocess.run(command, capture_output=True)
-
+    proc = subprocess.run(command, capture_output=True)
+    return proc.stdout.decode("utf-8")
 
 def get_device_count():
     """Get the number of devices connected to this PC."""
-    proc = rwo("OTADCommand.exe get_device_count")
-    m = re.search('^([0-9]+)\\r\\n$', proc.stdout.decode("utf-8"))
+    output = rwo("OTADCommand.exe get_device_count")
+    m = re.search('^([0-9]+)\\r\\n$', output)
     return m.group(1)
 
 
@@ -30,9 +30,8 @@ class DeviceInfo():
 
 
 def get_device_info(device_id):
-    proc = rwo(f"OTADCommand.exe get_device_info {device_id}")
+    output = rwo(f"OTADCommand.exe get_device_info {device_id}")
     e = 'get_device_info :  command exec fail ( error code : 0x0040001)\r\n'
-    output = proc.stdout.decode('utf-8') 
     if output == e:
         raise InvalidIdException(device_id)
 
@@ -71,9 +70,8 @@ class UnknownCommand():
 
 def get_command_desc(device_id):
     """Get a list of commands supported by the device."""
-    proc = rwo(f"OTADCommand.exe get_command_desc {device_id}")
-    e = b'get_command_desc :  command exec fail ( error code : 0x0040001)\r\n'
-    output = proc.stdout.decode('utf-8')
+    output = rwo(f"OTADCommand.exe get_command_desc {device_id}")
+    e = 'get_command_desc :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_id)
 
