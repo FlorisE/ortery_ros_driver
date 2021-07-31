@@ -1,0 +1,4 @@
+int64 index
+---
+turntable_interfaces/msg/PropertyDesc[] property_descs
+bool success

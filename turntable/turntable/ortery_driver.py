@@ -8,6 +8,7 @@ def rwo(command):
     proc = subprocess.run(command, capture_output=True)
     return proc.stdout.decode("utf-8")
 
+
 def get_device_count():
     """Get the number of devices connected to this PC."""
     output = rwo("OTADCommand.exe get_device_count")
@@ -63,7 +64,6 @@ command_dict = {
     }
 
 
-
 class UnknownCommand():
     pass
 
@@ -78,3 +78,30 @@ def get_command_desc(device_id):
     command_ids = re.findall("([0-9]+)\r\n", output)
     return [command_dict.get(int(command_id), UnknownCommand()) 
             for command_id in command_ids]
+
+
+Property = namedtuple("Property", "name value description")
+property_dict = {
+    16641: Property("otadDEVICE_PROPERTY_TURNTABLE_STATE",
+                    16641,
+                    "State of turntable"),
+    16643: Property("otadDEVICE_PROPERTY_TURNTABLE_TOTAL_STEPS",
+                    16643,
+                    "Total step of turntable")
+    }
+
+
+class UnknownProperty():
+    pass
+
+
+def get_property_desc(device_id):
+    """Get a list of properties that can be read or set by the device."""
+    output = rwo(f"OTADCommand.exe get_property_desc {device_id}")
+    e = 'get_property_desc :  command exec fail ( error code : 0x0040001)\r\n'
+    if output == e:
+        raise InvalidIdException(device_id)
+
+    property_ids = re.findall("([0-9]+)\r\n", output)
+    return [property_dict.get(int(property_id), UnknownProperty()) 
+            for property_id in property_ids]

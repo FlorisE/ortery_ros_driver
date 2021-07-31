@@ -23,8 +23,11 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CommandDesc.msg"
+  "msg/PropertyDesc.msg"
   "srv/GetDeviceCount.srv"
   "srv/GetDeviceInfo.srv"
+  "srv/GetCommandDesc.srv"
+  "srv/GetPropertyDesc.srv"
 )
 
 if(BUILD_TESTING)
