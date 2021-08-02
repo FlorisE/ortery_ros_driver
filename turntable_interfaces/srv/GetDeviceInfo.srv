@@ -1,5 +1,5 @@
-int64 index
+int64 device_i
 ---
 string product_name
-int64 device_id
+int64 device_i
 bool success

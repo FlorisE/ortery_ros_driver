@@ -33,6 +33,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetPropertiesData.srv"
   "srv/Turntable.srv"
   "srv/TurntableDegrees.srv"
+  "srv/TurntableStop.srv"
 )
 
 if(BUILD_TESTING)

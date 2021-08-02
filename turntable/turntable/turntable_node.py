@@ -12,7 +12,8 @@ from turntable_interfaces.srv import GetCommandDesc, \
                                      SetPropertyData, \
                                      SetPropertiesData, \
                                      Turntable, \
-                                     TurntableDegrees
+                                     TurntableDegrees, \
+                                     TurntableStop
 
 
 def map_ortery_command_desc_to_ros_type(ocd):
@@ -68,7 +69,15 @@ class TurntableNode(Node):
         self.turntable = self.create_service(
             Turntable,
             "turntable",
-            self.turntable)
+            self.turntable_callback)
+        self.turntable_degrees = self.create_service(
+            TurntableDegrees,
+            "turntable_degrees",
+            self.turntable_degrees_callback)
+        self.turntable_stop = self.create_service(
+            TurntableStop,
+            "turntable_stop",
+            self.turntable_stop_callback)
         
     def get_device_count_callback(self, request, response):
         response.count = driver.get_device_count()
@@ -78,7 +87,7 @@ class TurntableNode(Node):
         try:
             device_info = driver.get_device_info(request.id)
             response.product_name = device_info.product_name
-            response.device_id = device_info.device_id
+            response.device_i = device_info.device_i
             response.success = True
         except InvalidIdException:
             response.success = False
@@ -87,7 +96,7 @@ class TurntableNode(Node):
 
     def get_command_desc_callback(self, request, response):
         try:
-            command_descs = driver.get_command_desc(request.id)
+            command_descs = driver.get_command_desc(request.device_i)
             response.command_descs = [
                 map_ortery_command_desc_to_ros_type(command_desc)
                 for command_desc in command_descs]
@@ -98,7 +107,7 @@ class TurntableNode(Node):
 
     def get_property_desc_callback(self, request, response):
         try:
-            property_descs = driver.get_property_desc(request.id)
+            property_descs = driver.get_property_desc(request.device_i)
             response.property_descs = [
                 map_ortery_property_desc_to_ros_type(property_desc)
                 for property_desc in property_descs]
@@ -144,7 +153,7 @@ class TurntableNode(Node):
 
     def turntable_callback(self, request, response):
         try:
-            response.success = device.turntable(request.device_i,
+            response.success = driver.turntable(request.device_i,
                                                 request.speed,
                                                 request.direction,
                                                 request.step)
@@ -152,11 +161,11 @@ class TurntableNode(Node):
             response.success = False
         return response
 
-    def turntable_degree_callback(self, request, response):
+    def turntable_degrees_callback(self, request, response):
         try:
             total_steps = driver.get_property_data(request.device_i,
                                                    16643)
-            response.success = device.turntable(request.device_i,
+            response.success = driver.turntable(request.device_i,
                                                 request.speed,
                                                 request.direction,
                                                 int(request.degrees * (total_steps/360)))
@@ -164,7 +173,12 @@ class TurntableNode(Node):
             response.success = False
         return response
 
-                                
+    def turntable_stop_callback(self, request, response):
+        try:
+            response.success = device.send_command(request.device_i, 13057)
+        except:
+            response.success = False
+        return response
 
 
 def main(args=None):

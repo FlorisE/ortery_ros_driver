@@ -1,4 +1,3 @@
 int64 device_i
 ---
-PropertyDesc[] property_descs
 bool success
