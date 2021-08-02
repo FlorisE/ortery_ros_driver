@@ -8,8 +8,11 @@ from turntable_interfaces.srv import GetCommandDesc, \
                                      GetDeviceInfo, \
                                      GetPropertyDesc, \
                                      GetPropertyData, \
+                                     SendCommand, \
                                      SetPropertyData, \
-                                     SetPropertiesData
+                                     SetPropertiesData, \
+                                     Turntable, \
+                                     TurntableDegrees
 
 
 def map_ortery_command_desc_to_ros_type(ocd):
@@ -31,33 +34,41 @@ def map_ortery_property_desc_to_ros_type(opd):
 class TurntableNode(Node):
     def __init__(self):
         self.get_device_count = self.create_service(
-                                    GetDeviceCount,
-                                    "get_device_count",
-                                    self.get_device_count_callback)
+            GetDeviceCount,
+            "get_device_count",
+            self.get_device_count_callback)
         self.get_device_info =  self.create_service(
-                                    GetDeviceInfo,
-                                    "get_device_info",
-                                    self.get_device_info_callback)
+            GetDeviceInfo,
+            "get_device_info",
+            self.get_device_info_callback)
         self.get_command_desc =  self.create_service(
-                                    GetCommandDesc,
-                                    "get_command_desc",
-                                    self.get_command_desc_callback)
+            GetCommandDesc,
+            "get_command_desc",
+            self.get_command_desc_callback)
         self.get_property_desc = self.create_service(
-                                    GetPropertyDesc,
-                                    "get_property_desc",
-                                    self.get_property_desc_callback)
+            GetPropertyDesc,
+            "get_property_desc",
+            self.get_property_desc_callback)
         self.get_property_data = self.create_service(
-                                    GetPropertyData,
-                                    "get_property_data",
-                                    self.get_property_data_callback)
+            GetPropertyData,
+            "get_property_data",
+            self.get_property_data_callback)
         self.set_property_data = self.create_service(
-                                    SetPropertyData,
-                                    "set_property_data",
-                                    self.set_property_data_callback)
+            SetPropertyData,
+            "set_property_data",
+            self.set_property_data_callback)
         self.set_properties_data = self.create_service(
-                                    SetPropertiesData,
-                                    "set_properties_data",
-                                    self.set_properties_data_callback)
+            SetPropertiesData,
+            "set_properties_data",
+            self.set_properties_data_callback)
+        self.send_command = self.create_service(
+            SendCommand,
+            "send_command",
+            self.send_command_callback)
+        self.turntable = self.create_service(
+            Turntable,
+            "turntable",
+            self.turntable)
         
     def get_device_count_callback(self, request, response):
         response.count = driver.get_device_count()
@@ -116,12 +127,44 @@ class TurntableNode(Node):
 
     def set_properties_data_callback(self, request, response):
         try:
-            result.success = driver.set_properties_data(request.device_i,
-                                                        request.properties,
-                                                        request.data)
+            response.success = driver.set_properties_data(request.device_i,
+                                                          request.properties,
+                                                          request.data)
         except:
             response.success = False
         return response
+
+    def send_command_callback(self, request, response):
+        try:
+            response.success = driver.send_command(request.device_i,
+                                                   request.command)
+        except:
+            response.success = False
+        return response
+
+    def turntable_callback(self, request, response):
+        try:
+            response.success = device.turntable(request.device_i,
+                                                request.speed,
+                                                request.direction,
+                                                request.step)
+        except:
+            response.success = False
+        return response
+
+    def turntable_degree_callback(self, request, response):
+        try:
+            total_steps = driver.get_property_data(request.device_i,
+                                                   16643)
+            response.success = device.turntable(request.device_i,
+                                                request.speed,
+                                                request.direction,
+                                                int(request.degrees * (total_steps/360)))
+        except:
+            response.success = False
+        return response
+
+                                
 
 
 def main(args=None):

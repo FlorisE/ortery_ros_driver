@@ -1,0 +1,6 @@
+int64 device_i
+int64 speed
+int64 direction
+int64 degrees
+---
+bool success

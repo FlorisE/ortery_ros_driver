@@ -31,6 +31,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetPropertyData.srv"
   "srv/SetPropertyData.srv"
   "srv/SetPropertiesData.srv"
+  "srv/Turntable.srv"
+  "srv/TurntableDegrees.srv"
 )
 
 if(BUILD_TESTING)
