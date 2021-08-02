@@ -1,0 +1,5 @@
+int64 device_i
+int64 property_id
+int64 data
+---
+bool success

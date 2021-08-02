@@ -1,8 +1,15 @@
 import rclpy
 import ortery_driver as driver
 from rclpy.node import Node
-from turntable_interfaces.msg import CommandDesc, PropertyDesc
-from turntable_interfaces.srv import GetDeviceCount, GetDeviceInfo, GetCommandDesc, GetPropertyDesc
+from turntable_interfaces.msg import CommandDesc, \
+                                     PropertyDesc
+from turntable_interfaces.srv import GetCommandDesc, \
+                                     GetDeviceCount, \
+                                     GetDeviceInfo, \
+                                     GetPropertyDesc, \
+                                     GetPropertyData, \
+                                     SetPropertyData, \
+                                     SetPropertiesData
 
 
 def map_ortery_command_desc_to_ros_type(ocd):
@@ -43,6 +50,14 @@ class TurntableNode(Node):
                                     GetPropertyData,
                                     "get_property_data",
                                     self.get_property_data_callback)
+        self.set_property_data = self.create_service(
+                                    SetPropertyData,
+                                    "set_property_data",
+                                    self.set_property_data_callback)
+        self.set_properties_data = self.create_service(
+                                    SetPropertiesData,
+                                    "set_properties_data",
+                                    self.set_properties_data_callback)
         
     def get_device_count_callback(self, request, response):
         response.count = driver.get_device_count()
@@ -87,6 +102,24 @@ class TurntableNode(Node):
                                                      request.property_id)
             response.success = True
         except InvalidIdException:
+            response.success = False
+        return response
+
+    def set_property_data_callback(self, request, response):
+        try:
+            result.success = driver.set_property_data(request.device_i,
+                                                      request.property_id,
+                                                      request.data)
+        except:
+            response.success = False
+        return response
+
+    def set_properties_data_callback(self, request, response):
+        try:
+            result.success = driver.set_properties_data(request.device_i,
+                                                        request.properties,
+                                                        request.data)
+        except:
             response.success = False
         return response
 

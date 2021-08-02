@@ -3,15 +3,15 @@ import subprocess
 from collections import namedtuple
 
 
-def rwo(command):
+def rwo(command, debug=False):
     """Wrap subprocess.run to always capture output."""
     proc = subprocess.run(command, capture_output=True)
     return proc.stdout.decode("utf-8")
 
 
-def get_device_count():
+def get_device_count(debug=False):
     """Get the number of devices connected to this PC."""
-    output = rwo("OTADCommand.exe get_device_count")
+    output = rwo("OTADCommand.exe get_device_count", debug)
     m = re.search('^([0-9]+)\\r\\n$', output)
     return m.group(1)
 
@@ -30,8 +30,8 @@ class DeviceInfo():
         self.device_id = device_id
 
 
-def get_device_info(device_id):
-    output = rwo(f"OTADCommand.exe get_device_info {device_id}")
+def get_device_info(device_id, debug=False):
+    output = rwo(f"OTADCommand.exe get_device_info {device_id}", debug)
     e = 'get_device_info :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_id)
@@ -68,9 +68,9 @@ class UnknownCommand():
     pass
 
 
-def get_command_desc(device_id):
+def get_command_desc(device_id, debug=False):
     """Get a list of commands supported by the device."""
-    output = rwo(f"OTADCommand.exe get_command_desc {device_id}")
+    output = rwo(f"OTADCommand.exe get_command_desc {device_id}", debug)
     e = 'get_command_desc :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_id)
@@ -95,9 +95,9 @@ class UnknownProperty():
     pass
 
 
-def get_property_desc(device_id):
+def get_property_desc(device_id, debug=False):
     """Get a list of properties that can be read or set by the device."""
-    output = rwo(f"OTADCommand.exe get_property_desc {device_id}")
+    output = rwo(f"OTADCommand.exe get_property_desc {device_id}", debug)
     e = 'get_property_desc :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_id)
@@ -107,11 +107,97 @@ def get_property_desc(device_id):
             for property_id in property_ids]
 
 
-def get_property_data(device_i, property_id):
+def get_property_data(device_i, property_id, debug=False):
     """Get the data for a specified property."""
-    output = rwo(f"OTADCommand.exe get_property_data {device_i} {property_id}")
+    cmd = f"OTADCommand.exe get_property_data {device_i} {property_id}"
+    output = rwo(cmd, debug)
     e = 'get_property_data :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_id)
     m = re.search("^([0-9]+)", output)
     return m.group(1)
+
+
+class SetPropertyValueUnsupportedException(Exception):
+    """Exception for when setting this property is not supported."""
+    def __init__(self, device_i, property_id, data):
+        Exception.__init__(self)
+        self.device_i = device_i
+        self.property_id = property_id
+        self.data = data
+
+
+class SetPropertiesValueUnsupportedException(Exception):
+    """Exception for when setting this property is not supported."""
+    def __init__(self, device_i, properties, data):
+        Exception.__init__(self)
+        self.device_i = device_i
+        self.properties = properties
+        self.data = data
+
+
+class DeviceNotSupportPropertyException(Exception):
+    """Exception for when setting this property is not supported."""
+    def __init__(self, device_i, property_id, data):
+        Exception.__init__(self)
+        self.device_i = device_i
+        self.property_id = property_id
+        self.data = data
+
+
+class DeviceNotSupportPropertiesException(Exception):
+    """Exception for when setting this property is not supported."""
+    def __init__(self, device_i, properties, data):
+        Exception.__init__(self)
+        self.device_i = device_i
+        self.properties = properties
+        self.data = data
+
+
+def set_property_data(device_i, property_id, data, debug=False):
+    """Sets the data for a specified property."""
+    if device_i is None:
+        raise ValueError("device_i")
+    if property_id is None:
+        raise ValueError("property_id")
+    if data is None:
+        raise ValueError("data")
+    cmd = f"OTADCommand.exe set_property_data {device_i} {property_id} {data}"
+    output = rwo(cmd, debug)
+    e1 = 'set_property_data :  command exec fail ( error code : 0x0040001)\r\n'
+    if output == e1:
+        raise InvalidIdException(device_i)
+    e2 = 'set_property_data :  command exec fail ( error code : 0x004000a)\r\n'
+    if output == e2:
+        raise SetPropertyValueUnsupportedException(device_i, property_id, data)
+    e2 = 'set_property_data :  command exec fail ( error code : 0x0040005)\r\n'
+    if output == e2:
+        raise DeviceNotSupportPropertyException(device_i, property_id, data)
+    return True
+
+
+def set_properties_data(device_i, properties, data, debug=False):
+    if type(device_i) is not int:
+        raise ValueError("device_i needs to be an int")
+    if type(properties) is not list:
+        raise ValueError("device_i should be a list")
+    if len(properties) == 0:
+        raise ValueError("At least one property should be specified")
+    if len(properties) > 20:
+        raise ValueError("Maximum of 20 properties can be set at a time")
+    cmd_builder = f"OTADCommand.exe set_properties_data {device_i} {data}"
+    for property in properties:
+        cmd_builder += f" {property}"
+    print(cmd_builder)
+    output = rwo(cmd_builder, debug)
+    print(output)
+    e = 'set_properties_data :  command exec fail ( error code : 0x0040001)\r\n'
+    if output == e:
+        raise InvalidIdException(device_i)
+    e = 'set_properties_data :  command exec fail ( error code : 0x004000a)\r\n'
+    if output == e:
+        raise SetPropertiesValueUnsupportedException(device_i, properties, data)
+    e = 'set_properties_data :  command exec fail ( error code : 0x0040005)\r\n'
+    if output == e:
+        raise DeviceNotSupportPropertiesException(device_i, properties, data)
+    return True
