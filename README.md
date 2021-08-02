@@ -3,6 +3,8 @@
 This package wraps the `OTADCommand.exe` utility for controlling Ortery turntables (e.g. Ortery PhotoCapture 360) and is hence meant to be used in ROS 2 for Windows.
 The file `ortery_driver.py` can also be used stand-alone in case you want to control the turntable directly via Python.
 
+We don't have access to any other turntable except for the Ortery PhotoCapture 360, hence we only tested it on that specific model. Feel free to contribute if you want to add specific functionality for other models.
+
 To use it make sure that the folder containing `OTADCommand.exe` is added to the `PATH` environment variable.
 
 Currently implemented ROS 2 services:
