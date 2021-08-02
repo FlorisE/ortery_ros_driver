@@ -17,7 +17,7 @@ def get_device_count():
 
 
 class InvalidIdException(Exception):
-    """Exception thrown when an invalid ID was passed."""
+    """Exception thrown when an invalid ID was passed, or device is offline."""
     def __init__(self, device_id):
         Exception.__init__(self)
         self.device_id = device_id
@@ -105,3 +105,13 @@ def get_property_desc(device_id):
     property_ids = re.findall("([0-9]+)\r\n", output)
     return [property_dict.get(int(property_id), UnknownProperty()) 
             for property_id in property_ids]
+
+
+def get_property_data(device_i, property_id):
+    """Get the data for a specified property."""
+    output = rwo(f"OTADCommand.exe get_property_data {device_i} {property_id}")
+    e = 'get_property_data :  command exec fail ( error code : 0x0040001)\r\n'
+    if output == e:
+        raise InvalidIdException(device_id)
+    m = re.search("^([0-9]+)", output)
+    return m.group(1)

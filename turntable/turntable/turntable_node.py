@@ -39,6 +39,10 @@ class TurntableNode(Node):
                                     GetPropertyDesc,
                                     "get_property_desc",
                                     self.get_property_desc_callback)
+        self.get_property_data = self.create_service(
+                                    GetPropertyData,
+                                    "get_property_data",
+                                    self.get_property_data_callback)
         
     def get_device_count_callback(self, request, response):
         response.count = driver.get_device_count()
@@ -68,10 +72,19 @@ class TurntableNode(Node):
 
     def get_property_desc_callback(self, request, response):
         try:
-            property_descs = driver.get_property_desc(request_id)
+            property_descs = driver.get_property_desc(request.id)
             response.property_descs = [
                 map_ortery_property_desc_to_ros_type(property_desc)
                 for property_desc in property_descs]
+            response.success = True
+        except InvalidIdException:
+            response.success = False
+        return response
+
+    def get_property_data_callback(self, request, response):
+        try:
+            response.data = driver.get_property_data(request.device_i,
+                                                     request.property_id)
             response.success = True
         except InvalidIdException:
             response.success = False

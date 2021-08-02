@@ -28,6 +28,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetDeviceInfo.srv"
   "srv/GetCommandDesc.srv"
   "srv/GetPropertyDesc.srv"
+  "srv/GetPropertyData.srv"
 )
 
 if(BUILD_TESTING)
