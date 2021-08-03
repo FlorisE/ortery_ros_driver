@@ -1,5 +1,5 @@
 import rclpy
-import ortery_driver as driver
+import turntable.ortery_driver as driver
 from rclpy.node import Node
 from turntable_interfaces.msg import CommandDesc, \
                                      PropertyDesc
@@ -34,6 +34,7 @@ def map_ortery_property_desc_to_ros_type(opd):
 
 class TurntableNode(Node):
     def __init__(self):
+        super().__init__("turntable_node")
         self.get_device_count = self.create_service(
             GetDeviceCount,
             "get_device_count",
@@ -78,14 +79,19 @@ class TurntableNode(Node):
             TurntableStop,
             "turntable_stop",
             self.turntable_stop_callback)
+        self.declare_parameter("debug", False)
+
+    def get_debug_value(self):
+        return self.get_parameter("debug").get_parameter_value().bool_value
         
     def get_device_count_callback(self, request, response):
-        response.count = driver.get_device_count()
+        response.count = driver.get_device_count(self.get_debug_value())
         return response
 
     def get_device_info_callback(self, request, response):
         try:
-            device_info = driver.get_device_info(request.id)
+            device_info = driver.get_device_info(request.id,
+                                                 self.get_debug_value())
             response.product_name = device_info.product_name
             response.device_i = device_info.device_i
             response.success = True
@@ -96,7 +102,8 @@ class TurntableNode(Node):
 
     def get_command_desc_callback(self, request, response):
         try:
-            command_descs = driver.get_command_desc(request.device_i)
+            command_descs = driver.get_command_desc(request.device_i,
+                                                    self.get_debug_value())
             response.command_descs = [
                 map_ortery_command_desc_to_ros_type(command_desc)
                 for command_desc in command_descs]
@@ -107,7 +114,8 @@ class TurntableNode(Node):
 
     def get_property_desc_callback(self, request, response):
         try:
-            property_descs = driver.get_property_desc(request.device_i)
+            property_descs = driver.get_property_desc(request.device_i,
+                                                      self.get_debug_value())
             response.property_descs = [
                 map_ortery_property_desc_to_ros_type(property_desc)
                 for property_desc in property_descs]
@@ -119,7 +127,8 @@ class TurntableNode(Node):
     def get_property_data_callback(self, request, response):
         try:
             response.data = driver.get_property_data(request.device_i,
-                                                     request.property_id)
+                                                     request.property_id,
+                                                     self.get_debug_value())
             response.success = True
         except InvalidIdException:
             response.success = False
@@ -129,7 +138,8 @@ class TurntableNode(Node):
         try:
             result.success = driver.set_property_data(request.device_i,
                                                       request.property_id,
-                                                      request.data)
+                                                      request.data,
+                                                      self.get_debug_value())
         except:
             response.success = False
         return response
@@ -138,7 +148,8 @@ class TurntableNode(Node):
         try:
             response.success = driver.set_properties_data(request.device_i,
                                                           request.properties,
-                                                          request.data)
+                                                          request.data,
+                                                          self.get_debug_value())
         except:
             response.success = False
         return response
@@ -146,7 +157,8 @@ class TurntableNode(Node):
     def send_command_callback(self, request, response):
         try:
             response.success = driver.send_command(request.device_i,
-                                                   request.command)
+                                                   request.command,
+                                                   self.get_debug_value())
         except:
             response.success = False
         return response
@@ -156,7 +168,8 @@ class TurntableNode(Node):
             response.success = driver.turntable(request.device_i,
                                                 request.speed,
                                                 request.direction,
-                                                request.step)
+                                                request.step,
+                                                self.get_debug_value())
         except:
             response.success = False
         return response
@@ -164,18 +177,22 @@ class TurntableNode(Node):
     def turntable_degrees_callback(self, request, response):
         try:
             total_steps = driver.get_property_data(request.device_i,
-                                                   16643)
+                                                   16643,
+                                                   self.get_debug_value())
             response.success = driver.turntable(request.device_i,
                                                 request.speed,
                                                 request.direction,
-                                                int(request.degrees * (total_steps/360)))
+                                                int(request.degrees * (total_steps/360)),
+                                                self.get_debug_value())
         except:
             response.success = False
         return response
 
     def turntable_stop_callback(self, request, response):
         try:
-            response.success = device.send_command(request.device_i, 13057)
+            response.success = device.send_command(request.device_i,
+                                                   13057,
+                                                   self.get_debug_value())
         except:
             response.success = False
         return response

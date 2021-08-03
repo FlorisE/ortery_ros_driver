@@ -29,6 +29,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetCommandDesc.srv"
   "srv/GetPropertyDesc.srv"
   "srv/GetPropertyData.srv"
+  "srv/SendCommand.srv"
   "srv/SetPropertyData.srv"
   "srv/SetPropertiesData.srv"
   "srv/Turntable.srv"

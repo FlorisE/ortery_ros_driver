@@ -16,7 +16,7 @@ def get_device_count(debug=False):
     """Get the number of devices connected to this PC."""
     output = rwo("OTADCommand.exe get_device_count", debug)
     m = re.search('^([0-9]+)\\r\\n$', output)
-    return m.group(1)
+    return int(m.group(1))
 
 
 class InvalidIdException(Exception):
