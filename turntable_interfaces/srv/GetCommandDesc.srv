@@ -1,4 +1,4 @@
-int64 device_i
+int64 device_i 0
 ---
 CommandDesc[] command_descs
 bool success

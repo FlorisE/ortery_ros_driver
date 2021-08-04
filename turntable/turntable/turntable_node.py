@@ -190,7 +190,7 @@ class TurntableNode(Node):
 
     def turntable_stop_callback(self, request, response):
         try:
-            response.success = device.send_command(request.device_i,
+            response.success = driver.send_command(request.device_i,
                                                    13057,
                                                    self.get_debug_value())
         except:

@@ -1,4 +1,4 @@
-int64 device_i
+int64 device_i 0
 int64 command_id
 ---
 bool success
