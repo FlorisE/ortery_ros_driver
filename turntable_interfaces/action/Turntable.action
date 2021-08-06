@@ -1,6 +1,8 @@
 int64 device_i 0
 int64 speed 0
 int64 direction 0
-int64 degrees
+int64 step
 ---
 bool success
+---
+string state

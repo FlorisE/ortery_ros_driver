@@ -1,5 +1,8 @@
+import time
+
 import rclpy
 import turntable.ortery_driver as driver
+from rclpy.action import ActionServer
 from rclpy.node import Node
 from turntable_interfaces.msg import CommandDesc, \
                                      PropertyDesc
@@ -11,10 +14,9 @@ from turntable_interfaces.srv import GetCommandDesc, \
                                      SendCommand, \
                                      SetPropertyData, \
                                      SetPropertiesData, \
-                                     Turntable, \
-                                     TurntableDegrees, \
                                      TurntableStop
-
+from turntable_interfaces.action import Turntable, \
+                                        TurntableDegrees
 
 def map_ortery_command_desc_to_ros_type(ocd):
     desc = CommandDesc()
@@ -67,11 +69,13 @@ class TurntableNode(Node):
             SendCommand,
             "send_command",
             self.send_command_callback)
-        self.turntable = self.create_service(
+        self.turntable = ActionServer(
+            self,
             Turntable,
             "turntable",
             self.turntable_callback)
-        self.turntable_degrees = self.create_service(
+        self.turntable_degrees = ActionServer(
+            self,
             TurntableDegrees,
             "turntable_degrees",
             self.turntable_degrees_callback)
@@ -163,30 +167,43 @@ class TurntableNode(Node):
             response.success = False
         return response
 
-    def turntable_callback(self, request, response):
+    def turntable_callback(self, goal_handle):
         try:
-            response.success = driver.turntable(request.device_i,
-                                                request.speed,
-                                                request.direction,
-                                                request.step,
-                                                self.get_debug_value())
+            driver.turntable(goal_handle.request.device_i,
+                             goal_handle.request.speed,
+                             goal_handle.request.direction,
+                             goal_handle.request.step,
+                             self.get_debug_value())
+            while driver.get_property_data(goal_handle.request.device_i, 16641) == 8210:
+                time.sleep(1)
+            success = True
         except:
-            response.success = False
+            success = False
+        goal_handle.succeed()
+        result = Turntable.Result()
+        result.success = success
         return response
 
-    def turntable_degrees_callback(self, request, response):
+    def turntable_degrees_callback(self, goal_handle):
         try:
-            total_steps = driver.get_property_data(request.device_i,
+            total_steps = driver.get_property_data(goal_handle.request.device_i,
                                                    16643,
                                                    self.get_debug_value())
-            response.success = driver.turntable(request.device_i,
-                                                request.speed,
-                                                request.direction,
-                                                int(request.degrees * (total_steps/360)),
-                                                self.get_debug_value())
-        except:
-            response.success = False
-        return response
+            driver.turntable(goal_handle.request.device_i,
+                             goal_handle.request.speed,
+                             goal_handle.request.direction,
+                             int(goal_handle.request.degrees * (total_steps/360)),
+                             self.get_debug_value())
+            while driver.get_property_data(goal_handle.request.device_i, 16641) == 8210:
+                time.sleep(1)
+            success = True
+        except e:
+            raise(e)
+            success = False
+        goal_handle.succeed()
+        result = TurntableDegrees.Result()
+        result.success = success
+        return result
 
     def turntable_stop_callback(self, request, response):
         try:

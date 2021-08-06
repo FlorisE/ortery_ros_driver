@@ -32,8 +32,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SendCommand.srv"
   "srv/SetPropertyData.srv"
   "srv/SetPropertiesData.srv"
-  "srv/Turntable.srv"
-  "srv/TurntableDegrees.srv"
+  "action/Turntable.action"
+  "action/TurntableDegrees.action"
   "srv/TurntableStop.srv"
 )
 
