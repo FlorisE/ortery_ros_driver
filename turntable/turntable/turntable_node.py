@@ -175,8 +175,14 @@ class TurntableNode(Node):
                              goal_handle.request.step,
                              self.get_debug_value())
             while driver.get_property_data(goal_handle.request.device_i, 16641) == 8210:
+                feedback_msg = Turntable.Feedback()
+                feedback_msg.state = "Turning"
+                goal_handle.publish_feedback(feedback_msg)
                 time.sleep(1)
             success = True
+            feedback_msg = Turntable.Feedback()
+            feedback_msg.state = "Finished"
+            goal_handle.publish_feedback(feedback_msg)
         except:
             success = False
         goal_handle.succeed()
@@ -195,10 +201,15 @@ class TurntableNode(Node):
                              int(goal_handle.request.degrees * (total_steps/360)),
                              self.get_debug_value())
             while driver.get_property_data(goal_handle.request.device_i, 16641) == 8210:
+                feedback_msg = TurntableDegrees.Feedback()
+                feedback_msg.state = "Turning"
+                goal_handle.publish_feedback(feedback_msg)
                 time.sleep(1)
             success = True
+            feedback_msg = TurntableDegrees.Feedback()
+            feedback_msg.state = "Finished"
+            goal_handle.publish_feedback(feedback_msg)
         except e:
-            raise(e)
             success = False
         goal_handle.succeed()
         result = TurntableDegrees.Result()
