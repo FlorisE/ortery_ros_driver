@@ -2,6 +2,7 @@ import time
 
 import rclpy
 import turntable.ortery_driver as driver
+from turntable.ortery_driver import SSHOptions
 from rclpy.action import ActionServer
 from rclpy.node import Node
 from turntable_interfaces.msg import CommandDesc, \
@@ -84,18 +85,31 @@ class TurntableNode(Node):
             "turntable_stop",
             self.turntable_stop_callback)
         self.declare_parameter("debug", False)
+        self.declare_parameter("use_ssh", False)
+        self.declare_parameter("ssh_user", "")
+        self.declare_parameter("ssh_host", "")
+        self.declare_parameter("ssh_password", "")
 
     def get_debug_value(self):
         return self.get_parameter("debug").get_parameter_value().bool_value
+
+    def get_ssh_options(self):
+        if self.get_parameter("use_ssh").get_parameter_value().bool_value:
+            user = str(self.get_parameter("ssh_user").value)
+            host = str(self.get_parameter("ssh_host").value)
+            password = str(self.get_parameter("ssh_password").value)
+            return SSHOptions(user, host, password if password != "" else None)
+        return None
         
     def get_device_count_callback(self, request, response):
-        response.count = driver.get_device_count(self.get_debug_value())
+        response.count = driver.get_device_count(self.get_debug_value(), self.get_ssh_options())
         return response
 
     def get_device_info_callback(self, request, response):
         try:
             device_info = driver.get_device_info(request.id,
-                                                 self.get_debug_value())
+                                                 self.get_debug_value(),
+                                                 self.get_ssh_options())
             response.product_name = device_info.product_name
             response.device_i = device_info.device_i
             response.success = True
@@ -107,7 +121,8 @@ class TurntableNode(Node):
     def get_command_desc_callback(self, request, response):
         try:
             command_descs = driver.get_command_desc(request.device_i,
-                                                    self.get_debug_value())
+                                                    self.get_debug_value(),
+                                                    self.get_ssh_options())
             response.command_descs = [
                 map_ortery_command_desc_to_ros_type(command_desc)
                 for command_desc in command_descs]
@@ -119,7 +134,8 @@ class TurntableNode(Node):
     def get_property_desc_callback(self, request, response):
         try:
             property_descs = driver.get_property_desc(request.device_i,
-                                                      self.get_debug_value())
+                                                      self.get_debug_value(),
+                                                      self.get_ssh_options())
             response.property_descs = [
                 map_ortery_property_desc_to_ros_type(property_desc)
                 for property_desc in property_descs]
@@ -132,7 +148,8 @@ class TurntableNode(Node):
         try:
             response.data = driver.get_property_data(request.device_i,
                                                      request.property_id,
-                                                     self.get_debug_value())
+                                                     self.get_debug_value(),
+                                                     self.get_ssh_options())
             response.success = True
         except InvalidIdException:
             response.success = False
@@ -143,7 +160,8 @@ class TurntableNode(Node):
             result.success = driver.set_property_data(request.device_i,
                                                       request.property_id,
                                                       request.data,
-                                                      self.get_debug_value())
+                                                      self.get_debug_value(),
+                                                      self.get_ssh_options())
         except:
             response.success = False
         return response
@@ -153,7 +171,8 @@ class TurntableNode(Node):
             response.success = driver.set_properties_data(request.device_i,
                                                           request.properties,
                                                           request.data,
-                                                          self.get_debug_value())
+                                                          self.get_debug_value(),
+                                                          self.get_ssh_options())
         except:
             response.success = False
         return response
@@ -162,7 +181,8 @@ class TurntableNode(Node):
         try:
             response.success = driver.send_command(request.device_i,
                                                    request.command,
-                                                   self.get_debug_value())
+                                                   self.get_debug_value(),
+                                                   self.get_ssh_options())
         except:
             response.success = False
         return response
@@ -173,8 +193,13 @@ class TurntableNode(Node):
                              goal_handle.request.speed,
                              goal_handle.request.direction,
                              goal_handle.request.step,
-                             self.get_debug_value())
-            while driver.get_property_data(goal_handle.request.device_i, 16641) == 8210:
+                             self.get_debug_value(),
+                             self.get_ssh_options())
+            while driver.get_property_data(
+                    goal_handle.request.device_i,
+                    16641,
+                    self.get_debug_value(),
+                    self.get_ssh_options()) == 8210:
                 feedback_msg = Turntable.Feedback()
                 feedback_msg.state = "Turning"
                 goal_handle.publish_feedback(feedback_msg)
@@ -194,13 +219,19 @@ class TurntableNode(Node):
         try:
             total_steps = driver.get_property_data(goal_handle.request.device_i,
                                                    16643,
-                                                   self.get_debug_value())
+                                                   self.get_debug_value(),
+                                                   self.get_ssh_options())
             driver.turntable(goal_handle.request.device_i,
                              goal_handle.request.speed,
                              goal_handle.request.direction,
                              int(goal_handle.request.degrees * (total_steps/360)),
-                             self.get_debug_value())
-            while driver.get_property_data(goal_handle.request.device_i, 16641) == 8210:
+                             self.get_debug_value(),
+                             self.get_ssh_options())
+            while driver.get_property_data(
+                    goal_handle.request.device_i,
+                    16641,
+                    self.get_debug_value(),
+                    self.get_ssh_options()) == 8210:
                 feedback_msg = TurntableDegrees.Feedback()
                 feedback_msg.state = "Turning"
                 goal_handle.publish_feedback(feedback_msg)
@@ -220,13 +251,15 @@ class TurntableNode(Node):
         try:
             response.success = driver.send_command(request.device_i,
                                                    13057,
-                                                   self.get_debug_value())
+                                                   self.get_debug_value(),
+                                                   self.get_ssh_options())
         except:
             response.success = False
         return response
 
 
 def main(args=None):
+    print("Starting turntable node")
     rclpy.init(args=args)
 
     turntable_node = TurntableNode()

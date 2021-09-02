@@ -3,18 +3,33 @@ import subprocess
 from collections import namedtuple
 
 
-def rwo(command, debug=False):
+class SSHOptions():
+    def __init__(self, user, host, password=None):
+        self.user = user
+        self.host = host
+        self.password = password
+
+    def build_command(self, command):
+        password_prefix = ""
+        if self.password:
+            password_prefix = f"sshpass -p '{self.password}' "
+        return f"{password_prefix}ssh -o LogLevel=QUIET {self.user}@{self.host} \"{command}\""
+
+
+def rwo(command, debug=False, ssh_opt=None):
     """Wrap subprocess.run to always capture output."""
+    if ssh_opt:
+        command = ssh_opt.build_command(command)
     if debug: print(command)
-    proc = subprocess.run(command, capture_output=True)
+    proc = subprocess.run(command, capture_output=True, shell=True)
     output = proc.stdout.decode("utf-8")
-    if debug: print(output) 
+    if debug: print(repr(output)) 
     return output
 
 
-def get_device_count(debug=False):
+def get_device_count(debug=False, ssh_opt=None):
     """Get the number of devices connected to this PC."""
-    output = rwo("OTADCommand.exe get_device_count", debug)
+    output = rwo("OTADCommand.exe get_device_count", debug, ssh_opt)
     m = re.search('^([0-9]+)\\r\\n$', output)
     return int(m.group(1))
 
@@ -33,8 +48,8 @@ class DeviceInfo():
         self.device_i = device_i
 
 
-def get_device_info(device_i, debug=False):
-    output = rwo(f"OTADCommand.exe get_device_info {device_i}", debug)
+def get_device_info(device_i, debug=False, ssh_opt=None):
+    output = rwo(f"OTADCommand.exe get_device_info {device_i}", debug, ssh_opt)
     e = 'get_device_info :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -71,9 +86,9 @@ class UnknownCommand():
     pass
 
 
-def get_command_desc(device_i, debug=False):
+def get_command_desc(device_i, debug=False, ssh_opt=None):
     """Get a list of commands supported by the device."""
-    output = rwo(f"OTADCommand.exe get_command_desc {device_i}", debug)
+    output = rwo(f"OTADCommand.exe get_command_desc {device_i}", debug, ssh_opt)
     e = 'get_command_desc :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -98,9 +113,9 @@ class UnknownProperty():
     pass
 
 
-def get_property_desc(device_i, debug=False):
+def get_property_desc(device_i, debug=False, ssh_opt=None):
     """Get a list of properties that can be read or set by the device."""
-    output = rwo(f"OTADCommand.exe get_property_desc {device_i}", debug)
+    output = rwo(f"OTADCommand.exe get_property_desc {device_i}", debug, ssh_opt)
     e = 'get_property_desc :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -144,10 +159,10 @@ class GetPropertyDeviceNotSupportPropertyException(Exception):
         self.properties = properties
 
 
-def get_property_data(device_i, property_id, debug=False):
+def get_property_data(device_i, property_id, debug=False, ssh_opt=None):
     """Get the data for a specified property."""
     cmd = f"OTADCommand.exe get_property_data {device_i} {property_id}"
-    output = rwo(cmd, debug)
+    output = rwo(cmd, debug, ssh_opt)
     e = 'get_property_data :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -179,7 +194,7 @@ class SetPropertyDeviceNotSupportException(Exception):
         self.data = data
 
 
-def set_property_data(device_i, property_id, data, debug=False):
+def set_property_data(device_i, property_id, data, debug=False, ssh_opt=None):
     """Set the data for a specified property."""
     if device_i is None:
         raise ValueError("device_i")
@@ -188,7 +203,7 @@ def set_property_data(device_i, property_id, data, debug=False):
     if data is None:
         raise ValueError("data")
     cmd = f"OTADCommand.exe set_property_data {device_i} {property_id} {data}"
-    output = rwo(cmd, debug)
+    output = rwo(cmd, debug, ssh_opt)
     e = 'set_property_data :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -201,7 +216,7 @@ def set_property_data(device_i, property_id, data, debug=False):
     return True
 
 
-def set_properties_data(device_i, properties, data, debug=False):
+def set_properties_data(device_i, properties, data, debug=False, ssh_opt=None):
     """Set properties on the device."""
     if type(device_i) is not int:
         raise ValueError("device_i needs to be an int")
@@ -214,7 +229,7 @@ def set_properties_data(device_i, properties, data, debug=False):
     cmd_builder = f"OTADCommand.exe set_properties_data {device_i} {data}"
     for property in properties:
         cmd_builder += f" {property}"
-    output = rwo(cmd_builder, debug)
+    output = rwo(cmd_builder, debug, ssh_opt)
     e = 'set_properties_data :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -243,13 +258,13 @@ class CommandNotSupportedByDeviceException(Exception):
         self.command = command
 
 
-def send_command(device_i, command_id, debug=False):
+def send_command(device_i, command_id, debug=False, ssh_opt=None):
     """Send command to the device."""
     if type(device_i) is not int:
         raise ValueError("device_i needs to be an int")
     if type(command_id) is not int:
         raise ValueError("command_id needs to be an int")
-    output = rwo(f"OTADCommand.exe send_command {device_i} {command_id}", debug)
+    output = rwo(f"OTADCommand.exe send_command {device_i} {command_id}", debug, ssh_opt)
     e = 'send_command :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
@@ -269,7 +284,7 @@ SPEED_HIGH = 2
 DIRECTION_CLOCKWISE = 0
 DIRECTION_COUNTER_CLOCKWISE = 1
 
-def turntable(device_i, speed, direction, step, debug=False):
+def turntable(device_i, speed, direction, step, debug=False, ssh_opt=None):
     """Turn."""
     if type(device_i) is not int:
         raise ValueError("device_i needs to be an int")
@@ -280,7 +295,7 @@ def turntable(device_i, speed, direction, step, debug=False):
     if step < 0 or step > 665535:
         raise ValueError("The range for step is from 0 to 665535")
     cmd = f"OTADCommand.exe turntable {device_i} {speed} {direction} {step}"
-    output = rwo(cmd, debug)
+    output = rwo(cmd, debug, ssh_opt)
     e = 'turntable :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
