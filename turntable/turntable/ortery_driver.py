@@ -4,12 +4,15 @@ from collections import namedtuple
 
 
 class SSHOptions():
+    """Options for SSH connection."""
     def __init__(self, user, host, password=None):
+        """Initialize."""
         self.user = user
         self.host = host
         self.password = password
 
     def build_command(self, command):
+        """Build a command."""
         password_prefix = ""
         if self.password:
             password_prefix = f"sshpass -p '{self.password}' "
@@ -27,10 +30,19 @@ def rwo(command, debug=False, ssh_opt=None):
     return output
 
 
+class UnexpectedOutputException(Exception):
+    """Raised when the output is not as expected."""
+    def __init__(self, command, output):
+        Exception.__init__(self, f'Command: {command}\nOutput: {output}')
+
+
 def get_device_count(debug=False, ssh_opt=None):
     """Get the number of devices connected to this PC."""
-    output = rwo("OTADCommand.exe get_device_count", debug, ssh_opt)
+    command = "OTADCommand.exe get_device_count"
+    output = rwo(command, debug, ssh_opt)
     m = re.search('^([0-9]+)\\r\\n$', output)
+    if m is None or len(m.groups) < 2:
+        raise UnexpectedOutputException(command, output)
     return int(m.group(1))
 
 
@@ -49,13 +61,16 @@ class DeviceInfo():
 
 
 def get_device_info(device_i, debug=False, ssh_opt=None):
-    output = rwo(f"OTADCommand.exe get_device_info {device_i}", debug, ssh_opt)
+    command = f"OTADCommand.exe get_device_info {device_i}"
+    output = rwo(command, debug, ssh_opt)
     e = 'get_device_info :  command exec fail ( error code : 0x0040001)\r\n'
     if output == e:
         raise InvalidIdException(device_i)
 
     s = '^Product Name : ([A-Za-z0-9 ]+)\\r\\nDevice ID : ([0-9]+)\\r\\n'
     m = re.search(s, output)
+    if m is None or len(m.groups) < 3:
+        raise UnexpectedOutputException(command, output)
     return DeviceInfo(m.group(1), m.group(2))
 
 
@@ -173,6 +188,8 @@ def get_property_data(device_i, property_id, debug=False, ssh_opt=None):
     if output == e:
         raise GetPropertyDeviceNotSupportPropertyException(device_i, property_id)
     m = re.search("^([0-9]+)", output)
+    if m is None or len(m.groups) < 2:
+        raise UnexpectedOutputException(cmd, output)
     return int(m.group(1))
 
 
