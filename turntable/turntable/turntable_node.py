@@ -213,7 +213,7 @@ class TurntableNode(Node):
         goal_handle.succeed()
         result = Turntable.Result()
         result.success = success
-        return response
+        return result
 
     def turntable_degrees_callback(self, goal_handle):
         try:
@@ -240,8 +240,9 @@ class TurntableNode(Node):
             feedback_msg = TurntableDegrees.Feedback()
             feedback_msg.state = "Finished"
             goal_handle.publish_feedback(feedback_msg)
-        except e:
+        except Exception as e:
             success = False
+            self.get_logger().error(str(e))
         goal_handle.succeed()
         result = TurntableDegrees.Result()
         result.success = success

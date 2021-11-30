@@ -16,7 +16,7 @@ class SSHOptions():
         password_prefix = ""
         if self.password:
             password_prefix = f"sshpass -p '{self.password}' "
-        return f"{password_prefix}ssh -o LogLevel=QUIET {self.user}@{self.host} \"{command}\""
+        return f"{password_prefix}ssh -o StrictHostKeyChecking=no -o LogLevel=QUIET {self.user}@{self.host} \"{command}\""
 
 
 def rwo(command, debug=False, ssh_opt=None):
